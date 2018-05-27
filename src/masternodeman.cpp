@@ -666,9 +666,9 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
         }
 
         if(Params().NetworkID() == CChainParams::MAIN){
-            if(addr.GetPort() != 15971) return;
+            if(addr.GetPort() != 36963) return;
             if(!isIPV4) return;
-        } else if(addr.GetPort() == 15971) return;
+        } else if(addr.GetPort() == 36963) return;
 
         //search existing masternode list, this is where we update existing masternodes with new dsee broadcasts
         CMasternode* pmn = this->Find(vin);
