@@ -65,7 +65,7 @@ static void getHardcodedSeeds(std::vector<CAddress> &vSeedsOut)
     const int64_t oneWeek = 7 * 24 * 60 * 60;
     for (size_t i = 0; i < ips.size(); ++i)
     {
-        CAddress addr(CService(ips[i], 15971));
+        CAddress addr(CService(ips[i], 36963));
         addr.nTime = GetTime() - GetRand(oneWeek) - oneWeek;
         vSeedsOut.push_back(addr);
     }
