@@ -65,7 +65,7 @@ static void getHardcodedSeeds(std::vector<CAddress> &vSeedsOut)
     const int64_t oneWeek = 7 * 24 * 60 * 60;
     for (size_t i = 0; i < ips.size(); ++i)
     {
-        CAddress addr(CService(ips[i], 15971));
+        CAddress addr(CService(ips[i], 36963));
         addr.nTime = GetTime() - GetRand(oneWeek) - oneWeek;
         vSeedsOut.push_back(addr);
     }
@@ -82,7 +82,7 @@ public:
         pchMessageStart[3] = 0xb8;
         vAlertPubKey = ParseHex("0496131e15af76eb1d0e4a656ed3594ef64425850aa52617506177cf245575f0aa11e5b1777cfd8621ea39a7996872a07631ea25b3fdda00df37f5e982fe58850a");
         nDefaultPort = 36963;
-        nRPCPort = 96369;
+        nRPCPort = 36964;
         bnProofOfWorkLimit = CBigNum(~uint256(0) >> 20);
 		
         const char* pszTimestamp = "AnuCoin-An Universal Coin";
