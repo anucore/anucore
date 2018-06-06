@@ -21,8 +21,13 @@ BEGIN
             VALUE "CompanyName",        "AnuCoinOrg"
             VALUE "FileDescription",    "AnuCoin-Qt (OSS GUI client for AnuCoin)"
             VALUE "FileVersion",        VER_FILEVERSION_STR
+<<<<<<< HEAD
             VALUE "InternalName",       "AnuCoin-qt"
             VALUE "LegalCopyright",     "Copyright (c) 2017-2018 AnuCoin Developers, Copyright (c) 2014-2015 Dash Developers, Copyright (c) 2011-2012 PPCoin Developers, Copyright (c) 2009-2014 Bitcoin Developers"
+=======
+            VALUE "InternalName",       "bithold-qt"
+            VALUE "LegalCopyright",     "Copyright (c) 2018 AnuCoin Developers,Copyright (c) 2017-2018 Bithold Developers, Copyright (c) 2014-2015 Dash Developers, Copyright (c) 2011-2012 PPCoin Developers, Copyright (c) 2009-2014 Bitcoin Developers"
+>>>>>>> 00ea25f8ebc497981d565a470868a3551d436c88
             VALUE "LegalTrademarks1",   "Distributed under the MIT software license, see the accompanying file COPYING or http://www.opensource.org/licenses/mit-license.php."
             VALUE "OriginalFilename",   "AnuCoin-qt.exe"
             VALUE "ProductName",        "AnuCoin-Qt"
