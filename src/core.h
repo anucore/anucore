@@ -159,6 +159,12 @@ public:
 
     uint256 GetHash() const;
 
+    bool IsUnspendable() const
+    {
+        return IsEmpty() ||
+               (scriptPubKey.size() > 0 && *scriptPubKey.begin() == OP_RETURN);
+    }
+
     bool IsDust(int64_t MIN_RELAY_TX_FEE) const
     {
         // "Dust" is defined in terms of CTransaction::nMinRelayTxFee,

@@ -108,7 +108,7 @@ extern bool fHaveGUI;
 // Settings
 extern bool fUseFastIndex;
 extern unsigned int nDerivationMethodIndex;
-
+extern unsigned int nCoinCacheSize;
 extern bool fLargeWorkForkFound;
 extern bool fLargeWorkInvalidChainFound;
 

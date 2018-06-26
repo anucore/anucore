@@ -235,7 +235,7 @@ static const CRPCCommand vRPCCommands[] =
     { "getdifficulty",          &getdifficulty,          true,      false,     false },
     { "getinfo",                &getinfo,                true,      false,     false },
     { "getrawmempool",          &getrawmempool,          true,      false,     false },
-	{ "gettxout",               &gettxout,               true,      false,     false },
+    { "gettxout",               &gettxout,               true,      false,     false },
     { "getblock",               &getblock,               false,     false,     false },
     { "getblockbynumber",       &getblockbynumber,       false,     false,     false },
     { "getblockhash",           &getblockhash,           false,     false,     false },
@@ -697,7 +697,6 @@ void JSONRequest::parse(const Value& valRequest)
     strMethod = valMethod.get_str();
     if (strMethod != "getwork" && strMethod != "getblocktemplate")
         LogPrint("rpc", "ThreadRPCServer method=%s\n", strMethod);
-
     // Parse params
     Value valParams = find_value(request, "params");
     if (valParams.type() == array_type)

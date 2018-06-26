@@ -85,6 +85,8 @@ CScript COINBASE_FLAGS;
 
 const string strMessageMagic = "AnuCoin Signed Message:\n";
 
+unsigned int nCoinCacheSize = 5000;
+
 std::set<uint256> setValidatedTx;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1224,43 +1226,31 @@ int CTxIndex::GetDepthInMainChain() const
 bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock, bool s)
 {
     {
-        LOCK(cs_main);
+        if(s)
         {
+          LOCK(cs_main);
+          {
             if (mempool.lookup(hash, tx))
             {
                 return true;
             }
+          }
         }
         CTxDB txdb("r");
         CTxIndex txindex;
-        if (tx.ReadFromDisk(txdb, hash, txindex))
+        if (tx.ReadFromDisk(txdb, COutPoint(hash, 0), txindex))
         {
             CBlock block;
             if (block.ReadFromDisk(txindex.pos.nFile, txindex.pos.nBlockPos, false))
                 hashBlock = block.GetHash();
             return true;
         }
-        // look for transaction in disconnected blocks to find orphaned CoinBase and CoinStake transactions
-        BOOST_FOREACH(PAIRTYPE(const uint256, CBlockIndex*)& item, mapBlockIndex)
-        {
-            CBlockIndex* pindex = item.second;
-            if (pindex == pindexBest || pindex->pnext != 0)
-                continue;
-            CBlock block;
-            if (!block.ReadFromDisk(pindex))
-                continue;
-            BOOST_FOREACH(const CTransaction& txOrphan, block.vtx)
-            {
-                if (txOrphan.GetHash() == hash)
-                {
-                    tx = txOrphan;
-                    return true;
-                }
-            }
-        }
     }
     return false;
 }
+
+
+
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -1962,6 +1952,17 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         return false;
 
     unsigned int flags = SCRIPT_VERIFY_NOCACHE;
+
+    /* // Currently don't need
+    if(V3(nTime))
+    {
+      flags |= SCRIPT_VERIFY_NULLDUMMY |
+               SCRIPT_VERIFY_STRICTENC |
+               SCRIPT_VERIFY_ALLOW_EMPTY_SIG |
+               SCRIPT_VERIFY_FIX_HASHTYPE |
+               SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY;
+    }
+    */
 
     //// issue here: it doesn't know the version
     unsigned int nTxPos;

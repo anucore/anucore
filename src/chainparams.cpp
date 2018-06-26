@@ -61,6 +61,14 @@ static void getHardcodedSeeds(std::vector<CAddress> &vSeedsOut)
     ips.push_back("nodecn.anucoin.org");
     ips.push_back("nodeau.anucoin.org");
     ips.push_back("nodein.anucoin.org");
+    ips.push_back("nodeus.anucoin.org");
+    ips.push_back("45.76.117.173");
+    ips.push_back("159.89.110.156");
+    ips.push_back("172.245.36.202");
+    ips.push_back("202.182.107.127");
+    ips.push_back("149.28.11.208");
+    ips.push_back("107.174.133.144");
+    ips.push_back("172.245.36.4");
 	
     const int64_t oneWeek = 7 * 24 * 60 * 60;
     for (size_t i = 0; i < ips.size(); ++i)
@@ -123,6 +131,14 @@ public:
         vSeeds.push_back(CDNSSeedData("3",  "nodecn.anucoin.org"));
         vSeeds.push_back(CDNSSeedData("4",  "nodeau.anucoin.org"));
         vSeeds.push_back(CDNSSeedData("5",  "nodein.anucoin.org"));
+        vSeeds.push_back(CDNSSeedData("6",  "nodeus.anucoin.org"));
+        vSeeds.push_back(CDNSSeedData("13",  "45.76.117.173"));
+        vSeeds.push_back(CDNSSeedData("7",  "159.89.110.156"));
+        vSeeds.push_back(CDNSSeedData("8",  "172.245.36.202"));
+        vSeeds.push_back(CDNSSeedData("9",  "202.182.107.127"));
+        vSeeds.push_back(CDNSSeedData("10",  "149.28.11.208"));
+        vSeeds.push_back(CDNSSeedData("11",  "107.174.133.144"));
+        vSeeds.push_back(CDNSSeedData("12",  "172.245.36.4"));
 		
 		convertSeeds(vFixedSeeds, pnSeed, ARRAYLEN(pnSeed), nDefaultPort); 
 		
