@@ -7,13 +7,13 @@
     <x>0</x>
     <y>0</y>
     <width>1100</width>
-    <height>750</height>
+    <height>550</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>0</width>
-    <height>750</height>
+    <height>550</height>
    </size>
   </property>
   <property name="maximumSize">
@@ -1039,7 +1039,7 @@ background-color: #fff;</string>
              <x>0</x>
              <y>0</y>
              <width>1046</width>
-             <height>358</height>
+             <height>158</height>
             </rect>
            </property>
            <property name="styleSheet">
@@ -1205,8 +1205,6 @@ background-color: #fff;</string>
    </item>
   </layout>
  </widget>
- <resources>
-  <include location="../../../../AnuCoin_Compile/src/qt/bitcoin.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>

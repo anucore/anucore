@@ -7,13 +7,13 @@
     <x>0</x>
     <y>0</y>
     <width>1100</width>
-    <height>750</height>
+    <height>550</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>1100</width>
-    <height>750</height>
+    <height>550</height>
    </size>
   </property>
   <property name="maximumSize">
@@ -200,6 +200,9 @@ background-color: #fff</string>
         </item>
         <item>
          <widget class="QFrame" name="frame_7">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
           <property name="maximumSize">
            <size>
             <width>16777215</width>
@@ -318,78 +321,78 @@ background-color: #fff</string>
           </layout>
          </widget>
         </item>
-        <item>
-         <widget class="QFrame" name="frame_2">
-          <property name="styleSheet">
-           <string notr="true">#frame_2 {
+       </layout>
+      </item>
+      <item>
+       <widget class="QFrame" name="frame_2">
+        <property name="styleSheet">
+         <string notr="true">#frame_2 {
     background-color: #fff;
     border: 1px solid black;
 }</string>
-          </property>
-          <property name="frameShape">
-           <enum>QFrame::StyledPanel</enum>
-          </property>
-          <property name="frameShadow">
-           <enum>QFrame::Raised</enum>
-          </property>
-          <layout class="QHBoxLayout" name="horizontalLayout_5">
-           <property name="leftMargin">
-            <number>10</number>
-           </property>
-           <property name="topMargin">
-            <number>10</number>
-           </property>
-           <property name="rightMargin">
-            <number>10</number>
-           </property>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_5">
+         <property name="leftMargin">
+          <number>10</number>
+         </property>
+         <property name="topMargin">
+          <number>10</number>
+         </property>
+         <property name="rightMargin">
+          <number>10</number>
+         </property>
+         <property name="bottomMargin">
+          <number>10</number>
+         </property>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_12">
            <property name="bottomMargin">
-            <number>10</number>
+            <number>0</number>
            </property>
            <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_12">
-             <property name="bottomMargin">
-              <number>0</number>
+            <spacer name="horizontalSpacer_2">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
              </property>
-             <item>
-              <spacer name="horizontalSpacer_2">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-             <item>
-              <widget class="QPushButton" name="UpdateButton">
-               <property name="text">
-                <string>&amp;Update</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="startButton">
-               <property name="text">
-                <string>S&amp;tart</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="startAllButton">
-               <property name="text">
-                <string>St&amp;art All</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QPushButton" name="UpdateButton">
+             <property name="text">
+              <string>&amp;Update</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="startButton">
+             <property name="text">
+              <string>S&amp;tart</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="startAllButton">
+             <property name="text">
+              <string>St&amp;art All</string>
+             </property>
+            </widget>
            </item>
           </layout>
-         </widget>
-        </item>
-       </layout>
+         </item>
+        </layout>
+       </widget>
       </item>
      </layout>
     </widget>
