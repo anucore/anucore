@@ -1,8 +1,8 @@
 #ifndef MASTERNODEMANAGER_H
 #define MASTERNODEMANAGER_H
 
-#include "util.h"
-#include "sync.h"
+#include "misc/util.h"
+#include "misc/sync.h"
 
 #include <QWidget>
 #include <QTimer>
@@ -36,7 +36,6 @@ public:
 	void updateListConc();
 
 public slots:
-    void updateNodeList();
     void updateAdrenalineNode(QString alias, QString addr, QString privkey, QString txHash, QString txIndex, QString donationAddress, QString donationPercentage, QString status);
     void on_UpdateButton_clicked();
 

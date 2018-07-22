@@ -13,12 +13,14 @@
 #include "optionsmodel.h"
 #include "sendcoinsentry.h"
 #include "walletmodel.h"
-#include "base58.h"
-#include "coincontrol.h"
-#include "wallet.h"
-#include "init.h"
 #include "addressbookpage.h"
 #include "askpassphrasedialog.h"
+
+#include "main/init.h"
+
+#include "misc/base58.h"
+#include "misc/coincontrol.h"
+#include "wallet/wallet.h"
 
 #include <QMessageBox>
 #include <QLocale>
@@ -43,7 +45,6 @@ SendCoinsDialog::SendCoinsDialog(QWidget *parent) :
 
 #if QT_VERSION >= 0x040700
     /* Do not move this to the XML file, Qt before 4.7 will choke on it */
-    ui->lineEditCoinControlChange->setPlaceholderText(tr("Enter a AnuCoin address (e.g. Mg3UTsYKBUBLQvKs2CQ5aJi1N5xhoY5T6a)"));
 #endif
 
     addEntry();
@@ -52,11 +53,13 @@ SendCoinsDialog::SendCoinsDialog(QWidget *parent) :
     connect(ui->clearButton, SIGNAL(clicked()), this, SLOT(clear()));
 
     // Coin Control
-    ui->lineEditCoinControlChange->setFont(GUIUtil::bitcoinAddressFont());
     connect(ui->pushButtonCoinControl, SIGNAL(clicked()), this, SLOT(coinControlButtonClicked()));
     connect(ui->checkBoxCoinControlChange, SIGNAL(stateChanged(int)), this, SLOT(coinControlChangeChecked(int)));
     connect(ui->lineEditCoinControlChange, SIGNAL(textEdited(const QString &)), this, SLOT(coinControlChangeEdited(const QString &)));
 
+    // UTXO Splitter
+    connect(ui->splitBlockCheckBox, SIGNAL(stateChanged(int)), this, SLOT(splitBlockChecked(int)));
+    connect(ui->splitBlockLineEdit, SIGNAL(textChanged(const QString&)), this, SLOT(splitBlockLineEditChanged(const QString&)));
 
     // Dash specific
     QSettings settings;
@@ -69,20 +72,16 @@ SendCoinsDialog::SendCoinsDialog(QWidget *parent) :
     bool useInstantX = settings.value("bUseInstantX").toBool();
 
     if(fLiteMode) {
-        ui->checkUseDarksend->setChecked(false);
-        ui->checkUseDarksend->setVisible(false);
         ui->checkInstantX->setVisible(false);
         CoinControlDialog::coinControl->useDarkSend = false;
         CoinControlDialog::coinControl->useInstantX = false;
     }
     else{
-        ui->checkUseDarksend->setChecked(useDarkSend);
         ui->checkInstantX->setChecked(useInstantX);
         CoinControlDialog::coinControl->useDarkSend = useDarkSend;
         CoinControlDialog::coinControl->useInstantX = useInstantX;
     }
 
-    connect(ui->checkUseDarksend, SIGNAL(stateChanged ( int )), this, SLOT(updateDisplayUnit()));
     connect(ui->checkInstantX, SIGNAL(stateChanged ( int )), this, SLOT(updateInstantX()));
 
     // Coin Control: clipboard actions
@@ -231,6 +230,18 @@ void SendCoinsDialog::on_sendButton_clicked()
     for(int i = 0; i < ui->entries->count(); ++i)
     {
         SendCoinsEntry *entry = qobject_cast<SendCoinsEntry*>(ui->entries->itemAt(i)->widget());
+
+        //UTXO Splitter
+        CBitcoinAddress address = entry->getValue().address.toStdString();
+        if (!model->isMine(address) && ui->splitBlockCheckBox->checkState() == Qt::Checked) {
+            CoinControlDialog::coinControl->fSplitBlock = false;
+            ui->splitBlockCheckBox->setCheckState(Qt::Unchecked);
+            QMessageBox::warning(this, tr("Send Coins"),
+                tr("The split block tool does not work when sending to outside addresses. Try again."),
+                QMessageBox::Ok, QMessageBox::Ok);
+            return;
+        }
+
         if(entry)
         {
             if(entry->validate())
@@ -249,23 +260,26 @@ void SendCoinsDialog::on_sendButton_clicked()
         return;
     }
 
+    CoinControlDialog::coinControl->fSplitBlock = ui->splitBlockCheckBox->checkState() == Qt::Checked;
+
+    if (ui->entries->count() > 1 && ui->splitBlockCheckBox->checkState() == Qt::Checked) {
+        CoinControlDialog::coinControl->fSplitBlock = false;
+        ui->splitBlockCheckBox->setCheckState(Qt::Unchecked);
+        QMessageBox::warning(this, tr("Send Coins"),
+            tr("The split block tool does not work with multiple addresses. Try again."),
+            QMessageBox::Ok, QMessageBox::Ok);
+        return;
+    }
+
+    if (CoinControlDialog::coinControl->fSplitBlock)
+        CoinControlDialog::coinControl->nSplitBlock = int(ui->splitBlockLineEdit->text().toInt());
+
     QString strFunds = tr("using") + " <b>" + tr("anonymous funds") + "</b>";
     QString strFee = "";
     recipients[0].inputType = ONLY_DENOMINATED;
 
-    if(ui->checkUseDarksend->isChecked()) {
-        recipients[0].inputType = ONLY_DENOMINATED;
-        strFunds = tr("using") + " <b>" + tr("anonymous funds") + "</b>";
-        QString strNearestAmount(
-            BitcoinUnits::formatWithUnit(
-                model->getOptionsModel()->getDisplayUnit(), 0.1 * COIN));
-        strFee = QString(tr(
-            "(darksend requires this amount to be rounded up to the nearest %1)."
-        ).arg(strNearestAmount));
-    } else {
-        recipients[0].inputType = ALL_COINS;
-        strFunds = tr("using") + " <b>" + tr("any available funds (not recommended)") + "</b>";
-    }
+    recipients[0].inputType = ALL_COINS;
+    strFunds = tr("using") + " <b>" + tr("any available funds (not recommended)") + "</b>";
 
     if(ui->checkInstantX->isChecked()) {
         recipients[0].useInstantX = true;
@@ -290,6 +304,10 @@ void SendCoinsDialog::on_sendButton_clicked()
         QString recipientElement;
         recipientElement = tr("%1 to %2").arg(amount, address);
 
+        if (CoinControlDialog::coinControl->fSplitBlock) {
+            recipientElement.append(tr(" split into %1 outputs using the UTXO splitter.").arg(CoinControlDialog::coinControl->nSplitBlock));
+        }
+
         formatted.append(recipientElement);
     }
 
@@ -300,7 +318,10 @@ void SendCoinsDialog::on_sendButton_clicked()
     // and make many transactions while unlocking through this dialog
     // will call relock
     WalletModel::EncryptionStatus encStatus = model->getEncryptionStatus();
-    if(encStatus == model->Locked || encStatus == model->UnlockedForAnonymizationOnly)
+    if(encStatus == model->Locked
+		// UnlockedForStakingOnly was added as before it was substate of Locked state.
+		|| encStatus == model->UnlockedForStakingOnly
+		|| encStatus == model->UnlockedForAnonymizationOnly)
     {
         WalletModel::UnlockContext ctx(model->requestUnlock());
         if(!ctx.isValid())
@@ -444,7 +465,7 @@ SendCoinsEntry *SendCoinsDialog::addEntry()
     // Focus the field, so that entry can start immediately
     entry->clear();
     entry->setFocus();
-    ui->scrollAreaWidgetContents->resize(ui->scrollAreaWidgetContents->sizeHint());
+    ui->scrollAreaWidgetContents_2->resize(ui->scrollAreaWidgetContents_2->sizeHint());
     qApp->processEvents();
     QScrollBar* bar = ui->scrollArea->verticalScrollBar();
     if(bar)
@@ -537,7 +558,7 @@ bool SendCoinsDialog::handleURI(const QString &uri)
     // URI has to be valid
     if (GUIUtil::parseBitcoinURI(uri, &rv))
     {
-        CAnuCoincoinAddress address(rv.address.toStdString());
+        CAnuCoinAddress address(rv.address.toStdString());
         if (!address.IsValid())
             return false;
         pasteEntry(rv);
@@ -563,12 +584,7 @@ void SendCoinsDialog::setBalance(const CAmount& balance, const CAmount& stake, c
     {
         uint64_t bal = 0;
         QSettings settings;
-        settings.setValue("bUseDarkSend", ui->checkUseDarksend->isChecked());
-        if(ui->checkUseDarksend->isChecked()) {
-        bal = anonymizedBalance;
-        } else {
         bal = balance;
-        }
 
         ui->labelBalance->setText(BitcoinUnits::formatWithUnit(model->getOptionsModel()->getDisplayUnit(), bal));
     }
@@ -580,7 +596,6 @@ void SendCoinsDialog::updateDisplayUnit()
     if(!lockMain) return;
     setBalance(model->getBalance(), model->getStake(), model->getUnconfirmedBalance(), model->getImmatureBalance(), model->getAnonymizedBalance(),
     	model->getWatchBalance(), model->getWatchStake(), model->getWatchUnconfirmedBalance(), model->getWatchImmatureBalance());
-    CoinControlDialog::coinControl->useDarkSend = ui->checkUseDarksend->isChecked();
     coinControlUpdateLabels();
 }
 
@@ -754,6 +769,42 @@ void SendCoinsDialog::updateSmartFeeLabel()
 }
 */
 
+// UTXO splitter
+void SendCoinsDialog::splitBlockChecked(int state)
+{
+    if (model) {
+        CoinControlDialog::coinControl->fSplitBlock = (state == Qt::Checked);
+        ui->splitBlockLineEdit->setEnabled((state == Qt::Checked));
+        ui->labelBlockSizeText->setEnabled((state == Qt::Checked));
+        ui->labelBlockSize->setEnabled((state == Qt::Checked));
+        coinControlUpdateLabels();
+    }
+}
+
+//UTXO splitter
+void SendCoinsDialog::splitBlockLineEditChanged(const QString& text)
+{
+    //grab the amount in Coin Control AFter Fee field
+    QString qAfterFee = ui->labelCoinControlAfterFee->text().left(ui->labelCoinControlAfterFee->text().indexOf(" ")).replace("~", "").simplified().replace(" ", "");
+
+    //convert to CAmount
+    CAmount nAfterFee;
+    ParseMoney(qAfterFee.toStdString().c_str(), nAfterFee);
+
+    //if greater than 0 then divide after fee by the amount of blocks
+    CAmount nSize = nAfterFee;
+    int nBlocks = text.toInt();
+    if (nAfterFee && nBlocks)
+        nSize = nAfterFee / nBlocks;
+
+    //assign to split block dummy, which is used to recalculate the fee amount more outputs
+    CoinControlDialog::nSplitBlockDummy = nBlocks;
+
+    //update labels
+    ui->labelBlockSize->setText(QString::fromStdString(FormatMoney(nSize)));
+    coinControlUpdateLabels();
+}
+
 // Coin Control: copy label "Quantity" to clipboard
 void SendCoinsDialog::coinControlClipboardQuantity()
 {
@@ -847,7 +898,7 @@ void SendCoinsDialog::coinControlChangeEdited(const QString& text)
         CoinControlDialog::coinControl->destChange = CNoDestination();
         ui->labelCoinControlChangeLabel->setStyleSheet("QLabel{color:red;}");
 
-        CAnuCoincoinAddress addr = CAnuCoincoinAddress(text.toStdString());
+        CAnuCoinAddress addr = CAnuCoinAddress(text.toStdString());
 
         if (text.isEmpty()) // Nothing entered
         {
@@ -897,8 +948,6 @@ void SendCoinsDialog::coinControlUpdateLabels()
         if(entry)
             CoinControlDialog::payAmounts.append(entry->getValue().amount);
     }
-
-    ui->checkUseDarksend->setChecked(CoinControlDialog::coinControl->useDarkSend);
 
     if (CoinControlDialog::coinControl->HasSelected())
     {

@@ -4,22 +4,23 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "walletmodel.h"
+#include "main/main.h"
 
 #include "addresstablemodel.h"
 #include "guiconstants.h"
 #include "optionsmodel.h"
 #include "transactiontablemodel.h"
 
-#include "base58.h"
-#include "checkpoints.h"
-#include "db.h"
-#include "keystore.h"
-#include "main.h"
-#include "ui_interface.h"
-#include "wallet.h"
-#include "walletdb.h" // for BackupWallet
-#include "spork.h"
-#include "smessage.h"
+#include "misc/base58.h"
+#include "misc/checkpoints.h"
+#include "misc/db.h"
+#include "misc/keystore.h"
+#include "misc/ui_interface.h"
+#include "misc/smessage.h"
+
+#include "wallet/wallet.h"
+#include "wallet/walletdb.h" // for BackupWallet
+#include "masternode/spork.h"
 
 #include <stdint.h>
 
@@ -123,8 +124,20 @@ void WalletModel::updateStatus()
 {
     EncryptionStatus newEncryptionStatus = getEncryptionStatus();
 
+	// We resets StackingOnly flag if the wallet is locked. We do this here
+	// just for any case to make sure we do not have a case with invalid state.
+	// fWalletUnlockStakingOnly should be false all the time while
+	// EncryptionStatus is Locked.
+	if (newEncryptionStatus == Locked)
+	{
+		fWalletUnlockStakingOnly = false;
+	}
+
     if(cachedEncryptionStatus != newEncryptionStatus)
+	{
+		cachedEncryptionStatus = newEncryptionStatus;
         emit encryptionStatusChanged(newEncryptionStatus);
+	}
 }
 
 void WalletModel::pollBalanceChanged()
@@ -220,7 +233,7 @@ bool WalletModel::validateAddress(const QString &address)
             return true;
     };
 
-    CAnuCoincoinAddress addressParsed(sAddr);
+    CAnuCoinAddress addressParsed(sAddr);
     return addressParsed.IsValid();
 }
 
@@ -257,7 +270,7 @@ WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransact
         setAddress.insert(rcp.address);
         ++nAddresses;
 
-        CScript scriptPubKey = GetScriptForDestination(CAnuCoincoinAddress(rcp.address.toStdString()).Get());
+        CScript scriptPubKey = GetScriptForDestination(CAnuCoinAddress(rcp.address.toStdString()).Get());
         vecSend.push_back(std::pair<CScript, CAmount>(scriptPubKey, rcp.amount));
 
         total += rcp.amount;
@@ -378,7 +391,7 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(WalletModelTransaction &tran
 
                     CKeyID ckidTo = cpkTo.GetID();
 
-                    CAnuCoincoinAddress addrTo(ckidTo);
+                    CAnuCoinAddress addrTo(ckidTo);
 
                     if (SecretToPublicKey(ephem_secret, ephem_pubkey) != 0)
                     {
@@ -444,7 +457,7 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(WalletModelTransaction &tran
             }
 
             CScript scriptPubKey;
-            scriptPubKey.SetDestination(CAnuCoincoinAddress(sAddr).Get());
+            scriptPubKey.SetDestination(CAnuCoinAddress(sAddr).Get());
             vecSend.push_back(make_pair(scriptPubKey, rcp.amount));
 
             if (rcp.narration.length() > 0)
@@ -522,7 +535,7 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(WalletModelTransaction &tran
     foreach(const SendCoinsRecipient &rcp, recipients)
     {
         std::string strAddress = rcp.address.toStdString();
-        CTxDestination dest = CAnuCoincoinAddress(strAddress).Get();
+        CTxDestination dest = CAnuCoinAddress(strAddress).Get();
         std::string strLabel = rcp.label.toStdString();
         {
             LOCK(wallet->cs_wallet);
@@ -575,7 +588,7 @@ WalletModel::EncryptionStatus WalletModel::getEncryptionStatus() const
     }
     else if(fWalletUnlockStakingOnly)
     {
-    return Locked;
+    	return UnlockedForStakingOnly;
     }
     else if (wallet->fWalletUnlockAnonymizeOnly)
     {
@@ -601,18 +614,47 @@ bool WalletModel::setWalletEncrypted(bool encrypted, const SecureString &passphr
     }
 }
 
-bool WalletModel::setWalletLocked(bool locked, const SecureString &passPhrase, bool anonymizeOnly)
+bool WalletModel::lockWallet(bool stakingOnly)
 {
-    if(locked)
-    {
-        // Lock
-        return wallet->Lock();
-    }
-    else
-    {
-        // Unlock
-        return wallet->Unlock(passPhrase, anonymizeOnly);
-    }
+	// Lock
+    bool result = true;
+
+	if (!stakingOnly)
+	{
+		result = wallet->Lock();
+	}
+
+	//Resets Unlock Stacking Only flag.
+	if (result)
+	{
+		fWalletUnlockStakingOnly = stakingOnly;
+
+		// Updates status to reflect UI chnages as we changed fWalletUnlockStakingOnly flag,
+		// wallet->Lock(); also send this signal but we do this to ensure update with the
+		// latest values. This may lead to duplicated refresh on UI but this is minor issue.
+		updateStatus();
+	}
+
+    return result;
+}
+
+bool WalletModel::unlockWallet(const SecureString &passPhrase, bool stakingOnly)
+{
+    // Unlock
+    bool result = wallet->Unlock(passPhrase, false);
+
+	//Sets Unlock Stacking Only flag if required.
+	if (result)
+	{
+		fWalletUnlockStakingOnly = stakingOnly;
+
+		// Updates status to reflect UI chnages as we changed fWalletUnlockStakingOnly flag,
+		// wallet->Lock(); also send this signal but we do this to ensure update with the
+		// latest values. This may lead to duplicated refresh on UI but this is minor issue.
+		updateStatus();
+	}
+
+    return result;
 }
 
 bool WalletModel::isAnonymizeOnlyUnlocked()
@@ -626,6 +668,7 @@ bool WalletModel::changePassphrase(const SecureString &oldPass, const SecureStri
     {
         LOCK(wallet->cs_wallet);
         wallet->Lock(); // Make sure wallet is locked before attempting pass change
+		fWalletUnlockStakingOnly = false; // Resets also StakingOnly flag.
         retval = wallet->ChangeWalletPassphrase(oldPass, newPass);
     }
     return retval;
@@ -658,7 +701,7 @@ static void NotifyAddressBookChanged(WalletModel *walletmodel, CWallet *wallet,
                                   Q_ARG(int, status));
     } else
     {
-    QString strAddress = QString::fromStdString(CAnuCoincoinAddress(address).ToString());
+    QString strAddress = QString::fromStdString(CAnuCoinAddress(address).ToString());
     QString strLabel = QString::fromStdString(label);
 
     qDebug() << "NotifyAddressBookChanged : " + strAddress + " " + strLabel + " isMine=" + QString::number(isMine) + " status=" + QString::number(status);
@@ -746,29 +789,43 @@ void WalletModel::unsubscribeFromCoreSignals()
 // WalletModel::UnlockContext implementation
 WalletModel::UnlockContext WalletModel::requestUnlock()
 {
-    bool was_locked = getEncryptionStatus() == Locked;
+    EncryptionStatus wasEncryptionStatus = getEncryptionStatus();
 
-    if ((!was_locked) && fWalletUnlockStakingOnly && isAnonymizeOnlyUnlocked())
-    {
-       setWalletLocked(true);
-       was_locked = getEncryptionStatus() == Locked;
+	bool requestingUnlockRequired = wasEncryptionStatus == Locked
+		|| wasEncryptionStatus == UnlockedForStakingOnly
+		|| wasEncryptionStatus == UnlockedForAnonymizationOnly;
 
-    }
-    if(was_locked)
-    {
+	bool valid = false;
+
+	// if the wallet is already unlocked, we do not show UI and just
+	// continue.
+	if (requestingUnlockRequired)
+	{
         // Request UI to unlock wallet
         emit requireUnlock();
-    }
-    // If wallet is still locked, unlock was failed or cancelled, mark context as invalid
-    bool valid = getEncryptionStatus() != Locked;
 
-    return UnlockContext(this, valid, was_locked && !fWalletUnlockStakingOnly);
+    	// If wallet was not unlocked, unlock was failed or cancelled, mark context as invalid
+    	valid = getEncryptionStatus() == Unlocked;
+	}
+	else
+	{
+	    // If wallet is unencrypted or unlocked.
+    	valid = wasEncryptionStatus == Unencrypted || wasEncryptionStatus == Unlocked;
+	}
+
+    return UnlockContext(this, valid,
+		// We want to restore initial state if we requested unlock from user.
+		requestingUnlockRequired,
+		// We want to restore UnlockedForStakingOnly if it was initially configured.
+		wasEncryptionStatus == UnlockedForStakingOnly);
 }
 
-WalletModel::UnlockContext::UnlockContext(WalletModel *wallet, bool valid, bool relock):
+WalletModel::UnlockContext::UnlockContext(WalletModel *wallet, bool valid,
+	bool relock, bool forStakingOnly):
         wallet(wallet),
-        valid(valid),
-        relock(relock)
+		valid(valid),
+        relock(relock),
+        forStakingOnly(forStakingOnly)
 {
 }
 
@@ -776,7 +833,7 @@ WalletModel::UnlockContext::~UnlockContext()
 {
     if(valid && relock)
     {
-        wallet->setWalletLocked(true);
+       	wallet->lockWallet(forStakingOnly);
     }
 }
 
@@ -785,6 +842,7 @@ void WalletModel::UnlockContext::CopyFrom(const UnlockContext& rhs)
     // AnuCoin context; old object no longer relocks wallet
     *this = rhs;
     rhs.relock = false;
+    rhs.forStakingOnly = false;
 }
 
 bool WalletModel::getPubKey(const CKeyID &address, CPubKey& vchPubKeyOut) const
@@ -841,7 +899,7 @@ void WalletModel::listCoins(std::map<QString, std::vector<COutput> >& mapCoins) 
         CTxDestination address;
         if(!out.fSpendable || !ExtractDestination(cout.tx->vout[cout.i].scriptPubKey, address))
             continue;
-        mapCoins[QString::fromStdString(CAnuCoincoinAddress(address).ToString())].push_back(out);
+        mapCoins[QString::fromStdString(CAnuCoinAddress(address).ToString())].push_back(out);
     }
 }
 
@@ -872,4 +930,9 @@ void WalletModel::listLockedCoins(std::vector<COutPoint>& vOutpts)
 CWallet* WalletModel::getWallet()
 {
     return wallet;
+}
+
+bool WalletModel::isMine(CBitcoinAddress address)
+{
+    return IsMine(*wallet, address.Get());
 }

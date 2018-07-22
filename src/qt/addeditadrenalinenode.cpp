@@ -1,17 +1,19 @@
 #include "addeditadrenalinenode.h"
 #include "ui_addeditadrenalinenode.h"
-#include "masternodeconfig.h"
+#include "masternode/masternodeconfig.h"
 #include "masternodemanager.h"
 #include "ui_masternodemanager.h"
 
-#include "walletdb.h"
-#include "wallet.h"
-#include "ui_interface.h"
-#include "util.h"
-#include "key.h"
-#include "script.h"
-#include "init.h"
-#include "base58.h"
+#include "wallet/walletdb.h"
+#include "wallet/wallet.h"
+
+#include "misc/ui_interface.h"
+#include "misc/util.h"
+#include "misc/key.h"
+#include "misc/script.h"
+#include "misc/base58.h"
+
+#include "main/init.h"
 #include <QMessageBox>
 #include <QClipboard>
 
@@ -21,17 +23,12 @@ AddEditAdrenalineNode::AddEditAdrenalineNode(QWidget *parent) :
 {
     ui->setupUi(this);
 
-
-
-
     //Labels
     ui->aliasLineEdit->setPlaceholderText("Enter your Masternode alias");
     ui->addressLineEdit->setPlaceholderText("Enter your IP & port");
     ui->privkeyLineEdit->setPlaceholderText("Enter your Masternode private key");
-    ui->txhashLineEdit->setPlaceholderText("Enter your 100000 ANU TXID");
+    ui->txhashLineEdit->setPlaceholderText("Enter your 10000 ANU TXID");
     ui->outputindexLineEdit->setPlaceholderText("Enter your transaction output index");
-    ui->donationaddressLineEdit->setPlaceholderText("Enter aANUaddress for your MN donation");
-    ui->donationpercentageLineEdit->setPlaceholderText("Input the % for the donation");
 }
 
 AddEditAdrenalineNode::~AddEditAdrenalineNode()
@@ -66,7 +63,7 @@ void AddEditAdrenalineNode::on_okButton_clicked()
     else if(ui->txhashLineEdit->text() == "")
     {
         QMessageBox msg;
-        msg.setText("Please enter the transaction hash for the transaction that has 100 000 coins");
+        msg.setText("Please enter the transaction hash for the transaction that has 10 000 coins");
         msg.exec();
         return;
     }

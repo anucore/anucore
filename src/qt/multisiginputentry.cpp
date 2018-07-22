@@ -3,13 +3,15 @@
 #include <string>
 #include <vector>
 
-#include "base58.h"
 #include "multisiginputentry.h"
 #include "ui_multisiginputentry.h"
-#include "main.h"
-#include "script.h"
-#include "util.h"
-#include "wallet.h"
+#include "main/main.h"
+
+#include "misc/base58.h"
+#include "misc/script.h"
+#include "misc/util.h"
+
+#include "wallet/wallet.h"
 #include "walletmodel.h"
 
 
@@ -127,7 +129,7 @@ void MultisigInputEntry::on_transactionId_textChanged(const QString &transaction
         CTxDestination addr;
         if(ExtractDestination(script, addr))
         {
-            CAnuCoincoinAddress address(addr);
+            CAnuCoinAddress address(addr);
             QString addressStr(address.ToString().c_str());
             ui->transactionOutput->addItem(idStr + QString(" - ") + addressStr + QString(" - ") + amountStr + QString(" ANU"));
         }

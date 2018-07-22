@@ -5,12 +5,13 @@
 
 #include "addressbookpage.h"
 #include "addresstablemodel.h"
-#include "base58.h"
 #include "guiutil.h"
-#include "key.h"
 #include "multisigaddressentry.h"
 #include "ui_multisigaddressentry.h"
 #include "walletmodel.h"
+
+#include "misc/base58.h"
+#include "misc/key.h"
 
 
 MultisigAddressEntry::MultisigAddressEntry(QWidget *parent) : QFrame(parent), ui(new Ui::MultisigAddressEntry), model(0)
@@ -82,7 +83,7 @@ void MultisigAddressEntry::on_pubkey_textChanged(const QString &pubkey)
     std::vector<unsigned char> vchPubKey(ParseHex(pubkey.toStdString().c_str()));
     CPubKey pkey(vchPubKey);
     CKeyID keyID = pkey.GetID();
-    CAnuCoincoinAddress address(keyID);
+    CAnuCoinAddress address(keyID);
     ui->address->setText(address.ToString().c_str());
 
     if(!model)
@@ -102,7 +103,7 @@ void MultisigAddressEntry::on_address_textChanged(const QString &address)
         return;
 
     // Get public key of address
-    CAnuCoincoinAddress addr(address.toStdString().c_str());
+    CAnuCoinAddress addr(address.toStdString().c_str());
     CKeyID keyID;
     if(addr.GetKeyID(keyID))
     {

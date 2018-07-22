@@ -11,8 +11,9 @@
 #include "transactionrecord.h"
 #include "transactiontablemodel.h"
 #include "walletmodel.h"
+#include "guiconstants.h"
 
-#include "ui_interface.h"
+#include "misc/ui_interface.h"
 
 #include <QComboBox>
 #include <QDateTimeEdit>
@@ -39,7 +40,7 @@ TransactionView::TransactionView(QWidget *parent) :
 {
     QSettings settings;
     // Build filter row
-    setContentsMargins(0,0,0,0);
+    setContentsMargins(15,15,15,15);
 
     QHBoxLayout *hlayout = new QHBoxLayout();
     hlayout->setContentsMargins(0,0,0,0);
@@ -87,11 +88,13 @@ TransactionView::TransactionView(QWidget *parent) :
                                         TransactionFilterProxy::TYPE(TransactionRecord::RecvFromOther));
     typeWidget->addItem(tr("Sent to"), TransactionFilterProxy::TYPE(TransactionRecord::SendToAddress) |
                                   TransactionFilterProxy::TYPE(TransactionRecord::SendToOther));
+
     typeWidget->addItem(tr("Darksent"), TransactionFilterProxy::TYPE(TransactionRecord::Darksent));
     typeWidget->addItem(tr("Darksend Make Collateral Inputs"), TransactionFilterProxy::TYPE(TransactionRecord::DarksendMakeCollaterals));
     typeWidget->addItem(tr("Darksend Create Denominations"), TransactionFilterProxy::TYPE(TransactionRecord::DarksendCreateDenominations));
     typeWidget->addItem(tr("Darksend Denominate"), TransactionFilterProxy::TYPE(TransactionRecord::DarksendDenominate));
     typeWidget->addItem(tr("Darksend Collateral Payment"), TransactionFilterProxy::TYPE(TransactionRecord::DarksendCollateralPayment));
+
     typeWidget->addItem(tr("To yourself"), TransactionFilterProxy::TYPE(TransactionRecord::SendToSelf));
     typeWidget->addItem(tr("Mined"), TransactionFilterProxy::TYPE(TransactionRecord::Generated));
     typeWidget->addItem(tr("Other"), TransactionFilterProxy::TYPE(TransactionRecord::Other));
@@ -166,7 +169,6 @@ TransactionView::TransactionView(QWidget *parent) :
     connect(amountWidget, SIGNAL(textChanged(QString)), this, SLOT(changedAmount(QString)));
 
     connect(view, SIGNAL(doubleClicked(QModelIndex)), this, SIGNAL(doubleClicked(QModelIndex)));
-    connect(view, SIGNAL(clicked(QModelIndex)), this, SLOT(computeSum()));
     connect(view, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenu(QPoint)));
 
     connect(copyAddressAction, SIGNAL(triggered()), this, SLOT(copyAddress()));
@@ -193,7 +195,7 @@ void TransactionView::setModel(WalletModel *model)
 
         transactionView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         transactionView->setModel(transactionProxyModel);
-        transactionView->setAlternatingRowColors(true);
+        transactionView->setAlternatingRowColors(false);
         transactionView->setSelectionBehavior(QAbstractItemView::SelectRows);
         transactionView->setSelectionMode(QAbstractItemView::ExtendedSelection);
         transactionView->setSortingEnabled(true);
@@ -207,7 +209,7 @@ void TransactionView::setModel(WalletModel *model)
         transactionView->setColumnWidth(TransactionTableModel::Amount, AMOUNT_MINIMUM_COLUMN_WIDTH);
 
         // Note: it's a good idea to connect this signal AFTER the model is set
-        connect(transactionView->selectionModel(), SIGNAL(selectionChanged(QItemSelection, QItemSelection)), this, SLOT(computeSum()));
+        connect(transactionView->selectionModel(), SIGNAL(selectionChanged(QItemSelection, QItemSelection)), this, SLOT(updateTotalAmount()));
 
         columnResizingFixer = new GUIUtil::TableViewLastColumnResizingFixer(transactionView, AMOUNT_MINIMUM_COLUMN_WIDTH, MINIMUM_COLUMN_WIDTH);
 
@@ -235,7 +237,7 @@ void TransactionView::setModel(WalletModel *model)
 
         // Watch-only signal
         connect(model, SIGNAL(notifyWatchonlyChanged(bool)), this, SLOT(updateWatchOnlyColumn(bool)));
-        
+
         // Update transaction list with persisted settings
         chooseType(settings.value("transactionType").toInt());
         chooseDate(settings.value("transactionDate").toInt());
@@ -285,7 +287,7 @@ void TransactionView::chooseDate(int idx)
         break;
     case Range:
         dateRangeWidget->setVisible(true);
-        dateRangeChanged();
+        setDateRange();
         break;
     }
     // Persist settings
@@ -293,6 +295,9 @@ void TransactionView::chooseDate(int idx)
         QSettings settings;
         settings.setValue("transactionDate", idx);
     }
+
+	// Update total amount of selected items as selection may change.
+	updateTotalAmount();
 }
 
 void TransactionView::chooseType(int idx)
@@ -304,6 +309,9 @@ void TransactionView::chooseType(int idx)
     // Persist settings
     QSettings settings;
     settings.setValue("transactionType", idx);
+
+	// Update total amount of selected items as selection may change.
+	updateTotalAmount();
 }
 
 void TransactionView::chooseWatchonly(int idx)
@@ -312,6 +320,9 @@ void TransactionView::chooseWatchonly(int idx)
         return;
     transactionProxyModel->setWatchOnlyFilter(
         (TransactionFilterProxy::WatchOnlyFilter)watchOnlyWidget->itemData(idx).toInt());
+
+	// Update total amount of selected items as selection may change.
+	updateTotalAmount();
 }
 
 void TransactionView::changedPrefix(const QString &prefix)
@@ -319,6 +330,9 @@ void TransactionView::changedPrefix(const QString &prefix)
     if(!transactionProxyModel)
         return;
     transactionProxyModel->setAddressPrefix(prefix);
+
+	// Update total amount of selected items as selection may change.
+	updateTotalAmount();
 }
 
 void TransactionView::changedAmount(const QString &amount)
@@ -339,6 +353,9 @@ void TransactionView::changedAmount(const QString &amount)
     {
         transactionProxyModel->setMinAmount(0);
     }
+
+	// Update total amount of selected items as selection may change.
+	updateTotalAmount();
 }
 
 void TransactionView::exportClicked()
@@ -368,7 +385,7 @@ void TransactionView::exportClicked()
     if(!writer.write()) {
         emit message(tr("Exporting Failed"), tr("There was an error trying to save the transaction history to %1.").arg(filename),
             CClientUIInterface::MSG_ERROR);
-    } 
+    }
     else {
         emit message(tr("Exporting Successful"), tr("The transaction history was successfully saved to %1.").arg(filename),
             CClientUIInterface::MSG_INFORMATION);
@@ -462,21 +479,49 @@ void TransactionView::showDetails()
     }
 }
 
-/** Compute sum of all selected transactions */
-void TransactionView::computeSum()
+/** Update total sum of all selected transactions */
+void TransactionView::updateTotalAmount(bool ensureTotalAmountHidden)
 {
-    qint64 amount = 0;
-    int nDisplayUnit = model->getOptionsModel()->getDisplayUnit();
-    if(!transactionView->selectionModel())
-        return;
+	// If we want to hide total amount or no transactions selected,
+	// hide total amount.
+	if (ensureTotalAmountHidden || !transactionView->selectionModel())
+	{
+	    emit trxTotalAmountUpdated(tr(""));
+		return;
+	}
+
     QModelIndexList selection = transactionView->selectionModel()->selectedRows();
 
-    foreach (QModelIndex index, selection){
-        amount += index.data(TransactionTableModel::AmountRole).toLongLong();
-    }
-    QString strAmount(BitcoinUnits::formatWithUnit(nDisplayUnit, amount, true, BitcoinUnits::separatorAlways));
-    if (amount < 0) strAmount = "<span style='color:red;'>" + strAmount + "</span>";
-    emit trxAmount(strAmount);
+	QString strAmount;
+
+	// We want to show total amount just if more than 1 transaction is selected.
+	if (selection.size() > 1)
+	{
+		qint64 amount = 0;
+	    foreach (QModelIndex index, selection)
+		{
+	        amount += index.data(TransactionTableModel::AmountRole).toLongLong();
+	    }
+
+		int nDisplayUnit = model->getOptionsModel()->getDisplayUnit();
+
+		strAmount = BitcoinUnits::formatWithUnit(nDisplayUnit, amount, false,
+			BitcoinUnits::separatorAlways);
+
+	    if (amount >= 0)
+		{
+			QRgb amountColor = COLOR_POSITIVE.rgb();
+			strAmount = "<span>Sum: <span style='color:#"
+				+ QString::number(amountColor, 16)
+				+ ";'>" + strAmount + "</span></span>";
+		}
+		else
+		{
+			strAmount = "<span>Sum: <span style='color:#" + QString::number(COLOR_NEGATIVE.rgb(), 16)
+				+ ";'>" + strAmount + "</span></span>";
+		}
+	}
+    emit trxTotalAmountUpdated(strAmount);
 }
 
 QWidget *TransactionView::createDateRangeWidget()
@@ -517,8 +562,17 @@ QWidget *TransactionView::createDateRangeWidget()
 
 void TransactionView::dateRangeChanged()
 {
+	setDateRange();
+
+	// Update total amount of selected items as selection may change.
+	updateTotalAmount();
+}
+
+void TransactionView::setDateRange()
+{
     if(!transactionProxyModel)
         return;
+
     transactionProxyModel->setDateRange(
             QDateTime(dateFrom->date()),
             QDateTime(dateTo->date()).addDays(1));
@@ -530,7 +584,6 @@ void TransactionView::focusTransaction(const QModelIndex &idx)
         return;
     QModelIndex targetIdx = transactionProxyModel->mapFromSource(idx);
     transactionView->selectRow(targetIdx.row());
-    computeSum();
     transactionView->scrollTo(targetIdx);
     transactionView->setCurrentIndex(targetIdx);
     transactionView->setFocus();
@@ -568,4 +621,20 @@ void TransactionView::updateWatchOnlyColumn(bool fHaveWatchOnly)
 {
     watchOnlyWidget->setVisible(fHaveWatchOnly);
     transactionView->setColumnHidden(TransactionTableModel::Watchonly, !fHaveWatchOnly);
+}
+
+void TransactionView::showEvent(QShowEvent *)
+{
+	// We would like to show/hide the total amount of selected items
+	// when the view is shown/hidden. As it does not make sense to show it
+	// when the view is hidden.
+	updateTotalAmount();
+}
+
+void TransactionView::hideEvent(QHideEvent *)
+{
+	// We would like to show/hide the total amount of selected items
+	// when the view is shown/hidden. As it does not make sense to show it
+	// when the view is hidden.
+	updateTotalAmount(true);
 }

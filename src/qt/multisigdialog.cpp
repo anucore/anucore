@@ -4,21 +4,23 @@
 #include <QScrollBar>
 #include <vector>
 
+#include "main/main.h"
 #include "addresstablemodel.h"
-#include "base58.h"
-#include "key.h"
-#include "main.h"
 #include "multisigaddressentry.h"
 #include "multisiginputentry.h"
 #include "multisigdialog.h"
 #include "ui_multisigdialog.h"
-#include "script.h"
 #include "sendcoinsentry.h"
-#include "util.h"
-#include "wallet.h"
+
+#include "misc/base58.h"
+#include "misc/key.h"
+#include "misc/script.h"
+#include "misc/util.h"
+
+#include "wallet/wallet.h"
 #include "walletmodel.h"
 
-#include "txdb-leveldb.h"
+#include "misc/txdb-leveldb.h"
 
 MultisigDialog::MultisigDialog(QWidget *parent) : QDialog(parent), ui(new Ui::MultisigDialog), model(0)
 {
@@ -134,7 +136,7 @@ void MultisigDialog::on_createAddressButton_clicked()
     {
         MultisigAddressEntry *entry = qobject_cast<MultisigAddressEntry *>(ui->pubkeyEntries->itemAt(i)->widget());
         std::string strAddressEntered = entry->getPubkey().toUtf8().constData();
-        CAnuCoincoinAddress address(strAddressEntered);
+        CAnuCoinAddress address(strAddressEntered);
         if(pwalletMain && address.IsValid())
         {
             bool fError = false;
@@ -171,7 +173,7 @@ void MultisigDialog::on_createAddressButton_clicked()
 
     CScript script = GetScriptForMultisig(required, pubkeys);
     CScriptID scriptID = script.GetID();
-    CAnuCoincoinAddress address(scriptID);
+    CAnuCoinAddress address(scriptID);
     std::string label("multisig");
 
     LOCK(pwalletMain->cs_wallet);
@@ -257,7 +259,7 @@ void MultisigDialog::on_createTransactionButton_clicked()
             if(entry->validate())
             {
                 SendCoinsRecipient recipient = entry->getValue();
-                CAnuCoincoinAddress address(recipient.address.toStdString());
+                CAnuCoinAddress address(recipient.address.toStdString());
                 CScript scriptPubKey;
                 scriptPubKey.SetDestination(address.Get());
                 CAmount amount = recipient.amount;
@@ -321,7 +323,7 @@ void MultisigDialog::on_transaction_textChanged()
         CScript scriptPubKey = txout.scriptPubKey;
         CTxDestination addr;
         ExtractDestination(scriptPubKey, addr);
-        CAnuCoincoinAddress address(addr);
+        CAnuCoinAddress address(addr);
         SendCoinsRecipient recipient;
         recipient.address = QString(address.ToString().c_str());
         recipient.amount = txout.nValue;

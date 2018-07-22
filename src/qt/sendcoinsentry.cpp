@@ -7,7 +7,8 @@
 #include "walletmodel.h"
 #include "optionsmodel.h"
 #include "addresstablemodel.h"
-#include "stealth.h"
+
+#include "misc/stealth.h"
 
 #include <QApplication>
 #include <QClipboard>
@@ -25,7 +26,7 @@ SendCoinsEntry::SendCoinsEntry(QWidget *parent) :
 #if QT_VERSION >= 0x040700
     /* Do not move this to the XML file, Qt before 4.7 will choke on it */
     ui->addAsLabel->setPlaceholderText(tr("Enter a label for this address to add it to your address book"));
-    ui->payTo->setPlaceholderText(tr("Enter a AnuCoin address (e.g. Mg3UTsYKBUBLQvKs2CQ5aJi1N5xhoY5T6a)"));
+    ui->payTo->setPlaceholderText(tr("Enter a AnuCoin address (e.g. SXZ1DpQPXqAq5pWGFjLgsAsxoSRM23cbNK)"));
 #endif
     setFocusPolicy(Qt::TabFocus);
     setFocusProxy(ui->payTo);
@@ -42,19 +43,6 @@ void SendCoinsEntry::on_pasteButton_clicked()
 {
     // Paste text from clipboard into recipient field
     ui->payTo->setText(QApplication::clipboard()->text());
-}
-
-void SendCoinsEntry::on_addressBookButton_clicked()
-{
-    if(!model)
-        return;
-    AddressBookPage dlg(AddressBookPage::ForSending, AddressBookPage::SendingTab, this);
-    dlg.setModel(model->getAddressTableModel());
-    if(dlg.exec())
-    {
-        ui->payTo->setText(dlg.getReturnValue());
-        ui->payAmount->setFocus();
-    }
 }
 
 void SendCoinsEntry::on_payTo_textChanged(const QString &address)
@@ -136,7 +124,7 @@ SendCoinsRecipient SendCoinsEntry::getValue()
     rv.label = ui->addAsLabel->text();
     rv.amount = ui->payAmount->value();
 
- if (rv.address.length() > 75 
+ if (rv.address.length() > 75
         && IsStealthAddress(rv.address.toStdString()))
         rv.typeInd = AddressTableModel::AT_Stealth;
     else
@@ -148,8 +136,7 @@ SendCoinsRecipient SendCoinsEntry::getValue()
 QWidget *SendCoinsEntry::setupTabChain(QWidget *prev)
 {
     QWidget::setTabOrder(prev, ui->payTo);
-    QWidget::setTabOrder(ui->payTo, ui->addressBookButton);
-    QWidget::setTabOrder(ui->addressBookButton, ui->pasteButton);
+    QWidget::setTabOrder(ui->payTo, ui->pasteButton);
     QWidget::setTabOrder(ui->pasteButton, ui->deleteButton);
     QWidget::setTabOrder(ui->deleteButton, ui->addAsLabel);
     return ui->payAmount->setupTabChain(ui->addAsLabel);

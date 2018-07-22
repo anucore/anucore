@@ -9,8 +9,8 @@
 #include "addresstablemodel.h"
 #include "bitcoinunits.h"
 
-#include "wallet.h"
-#include "ui_interface.h"
+#include "wallet/wallet.h"
+#include "misc/ui_interface.h"
 
 #include <QList>
 #include <QColor>
@@ -348,8 +348,8 @@ QString TransactionTableModel::formatTxType(const TransactionRecord *wtx) const
         return tr("Received with");
     case TransactionRecord::RecvFromOther:
         return tr("Received from");
-    case TransactionRecord::RecvWithDarksend:
-        return tr("Received via Darksend");
+		case TransactionRecord::RecvWithDarksend:
+				return tr("Received via Darksend");
     case TransactionRecord::SendToAddress:
     case TransactionRecord::SendToOther:
         return tr("Sent to");
@@ -358,16 +358,16 @@ QString TransactionTableModel::formatTxType(const TransactionRecord *wtx) const
     case TransactionRecord::Generated:
         return tr("Mined");
 
-    case TransactionRecord::DarksendDenominate:
-        return tr("Darksend Denominate");
-    case TransactionRecord::DarksendCollateralPayment:
-        return tr("Darksend Collateral Payment");
-    case TransactionRecord::DarksendMakeCollaterals:
-        return tr("Darksend Make Collateral Inputs");
-    case TransactionRecord::DarksendCreateDenominations:
-        return tr("Darksend Create Denominations");
-    case TransactionRecord::Darksent:
-        return tr("Darksent");
+		case TransactionRecord::DarksendDenominate:
+				return tr("Darksend Denominate");
+		case TransactionRecord::DarksendCollateralPayment:
+				return tr("Darksend Collateral Payment");
+		case TransactionRecord::DarksendMakeCollaterals:
+				return tr("Darksend Make Collateral Inputs");
+		case TransactionRecord::DarksendCreateDenominations:
+				return tr("Darksend Create Denominations");
+		case TransactionRecord::Darksent:
+				return tr("Darksent");
 
     default:
         return QString();
@@ -379,16 +379,16 @@ QVariant TransactionTableModel::txAddressDecoration(const TransactionRecord *wtx
     switch(wtx->type)
     {
     case TransactionRecord::Generated:
-        return QIcon(fUseBlackTheme ? ":/icons/black/tx_mined" : ":/icons/tx_mined");
-    case TransactionRecord::RecvWithDarksend:
+        return QIcon(":/icons/tx_mined");
+		case TransactionRecord::RecvWithDarksend:
     case TransactionRecord::RecvWithAddress:
     case TransactionRecord::RecvFromOther:
-        return QIcon(fUseBlackTheme ? ":/icons/black/tx_input" : ":/icons/tx_input");
+        return QIcon(":/icons/tx_input");
     case TransactionRecord::SendToAddress:
     case TransactionRecord::SendToOther:
-        return QIcon(fUseBlackTheme ? ":/icons/black/tx_output" : ":/icons/tx_output");
+        return QIcon(":/icons/tx_output");
     default:
-        return QIcon(fUseBlackTheme ? ":/icons/black/tx_inout" : ":/icons/tx_inout");
+        return QIcon(":/icons/tx_inout");
     }
 }
 
@@ -405,7 +405,7 @@ QString TransactionTableModel::formatTxToAddress(const TransactionRecord *wtx, b
     case TransactionRecord::RecvFromOther:
         return QString::fromStdString(wtx->address) + watchAddress;
     case TransactionRecord::RecvWithAddress:
-    case TransactionRecord::RecvWithDarksend:
+		case TransactionRecord::RecvWithDarksend:
     case TransactionRecord::SendToAddress:
     case TransactionRecord::Generated:
     case TransactionRecord::Darksent:
@@ -573,7 +573,7 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
         }
         if(index.column() == Amount && rec->type != TransactionRecord::Generated && (rec->credit+rec->debit) > 0)
         {
-            return fUseBlackTheme ? QColor(0, 255, 0) : QColor(0, 128, 0);
+            return COLOR_POSITIVE;
         }
         if(index.column() == ToAddress)
         {

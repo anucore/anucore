@@ -1,10 +1,12 @@
 #include "transactionrecord.h"
 
-#include "base58.h"
-#include "util.h"
-#include "wallet.h"
-#include "darksend.h"
-#include "instantx.h"
+#include "misc/base58.h"
+#include "misc/util.h"
+
+#include "wallet/wallet.h"
+#include "darksend/darksend.h"
+
+#include "instantx/instantx.h"
 
 #include <stdint.h>
 
@@ -55,7 +57,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
                 {
                     // Received by Bitcoin Address
                     sub.type = TransactionRecord::RecvWithAddress;
-                    sub.address = CAnuCoincoinAddress(address).ToString();
+                    sub.address = CAnuCoinAddress(address).ToString();
                 }
                 else
                 {
@@ -144,7 +146,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
                 if (ExtractDestination(wtx.vout[0].scriptPubKey, address))
                 {
                     // Sent to Dash Address
-                    sub.address = CAnuCoincoinAddress(address).ToString();
+                    sub.address = CAnuCoinAddress(address).ToString();
                 }
                 else
                 {
@@ -199,7 +201,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
                 {
                     // Sent to Bitcoin Address
                     sub.type = TransactionRecord::SendToAddress;
-                    sub.address = CAnuCoincoinAddress(address).ToString();
+                    sub.address = CAnuCoinAddress(address).ToString();
                 }
                 else
                 {

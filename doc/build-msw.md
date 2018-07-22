@@ -11,16 +11,22 @@ WINDOWS BUILD NOTES
 ---------------------
 
 	SOON
-	
-	
-Example of Configuration file	
+
+
+Example of Configuration file
 ---------------------
 
 	rpcuser=AnuCoind
 	rpcpassword=vejktejklungwerklcgerkum
-	rpcport=15973
+	rpcport=46979
 	rpcallowip=127.0.0.1
 	listen=1
 	server=1
-	addnode=54.37.233.83
-	addnode=137.74.40.196
+	addnode=34.225.25.154
+	addnode=52.45.189.6
+	addnode=34.232.249.188
+	addnode=34.231.228.73
+	addnode=34.239.99.171
+	addnode=18.218.0.160
+	addnode=13.59.189.252
+	addnode=52.15.218.190
